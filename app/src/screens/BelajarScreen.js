@@ -2,12 +2,12 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Api from '../ApiService';
 import { validateSessionForm, LIMITS } from '../validation';
-import { Banner, Body, Button, Card, Field, Screen, Title } from '../ui';
+import { Banner, Body, Button, Card, Field, Screen, Title, tierLabel } from '../ui';
 
 function quotaText(q) {
   if (!q) return null;
-  if (q.limit == null) return `Paket ${q.tier}: sesi tanpa batas harian.`;
-  return `Paket ${q.tier}: sisa ${q.remaining} dari ${q.limit} sesi hari ini.`;
+  if (q.limit == null) return `Paket ${tierLabel(q.tier)}: sesi tanpa batas harian.`;
+  return `Paket ${tierLabel(q.tier)}: sisa ${q.remaining} dari ${q.limit} sesi hari ini.`;
 }
 
 export default function BelajarScreen({ navigation }) {

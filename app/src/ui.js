@@ -159,6 +159,12 @@ export function EmptyState({ title, children }) {
   );
 }
 
+// Backend mengirim tier huruf kecil ("free", "pro").
+export function tierLabel(tier) {
+  if (!tier) return '-';
+  return tier.charAt(0).toUpperCase() + tier.slice(1);
+}
+
 export function formatDate(iso) {
   if (!iso) return '';
   const d = new Date(iso);
