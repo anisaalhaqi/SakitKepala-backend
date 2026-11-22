@@ -1,0 +1,9 @@
+# Tes lokal TANPA tunnel (laptop / STB dari jaringan yang sama):
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build core-service gateway
+# lalu buka http://localhost:8080/api/docs
+# Compose tetap membaca seluruh file, jadi di .env isi sementara TUNNEL_TOKEN=lokal
+# (container tunnel tidak dijalankan pada perintah di atas).
+services:
+  gateway:
+    ports:
+      - "8080:80"

@@ -1,0 +1,64 @@
+# Stack microservice untuk STB. Rahasia dibaca dari file .env (TIDAK di-commit).
+# Hanya container microservice: core-service, gateway, tunnel (aturan pemakaian STB).
+services:
+  core-service:
+    build: ./core-service
+    restart: unless-stopped
+    # Sengaja memakai `environment` eksplisit (bukan env_file) agar TUNNEL_TOKEN tidak masuk ke core-service.
+    environment:
+      DB_PATH: /data/app.db
+      JWT_SECRET: ${JWT_SECRET:?isi JWT_SECRET di .env (openssl rand -hex 32)}
+      JWT_TTL_SECONDS: ${JWT_TTL_SECONDS:-3600}
+      API_KEYS: ${API_KEYS:-}
+      PARTNER_RATE_PER_MIN: ${PARTNER_RATE_PER_MIN:-60}
+      FREE_DAILY_QUOTA: ${FREE_DAILY_QUOTA:-5}
+      MAX_ATTEMPTS: ${MAX_ATTEMPTS:-3}
+      SUBSCRIPTION_SIMULATION: ${SUBSCRIPTION_SIMULATION:-true}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      AI_API_URL: ${AI_API_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_TIMEOUT: ${AI_TIMEOUT:-30}
+      PARTNERS_ENABLED: ${PARTNERS_ENABLED:-false}
+      PARTNER_TIMEOUT: ${PARTNER_TIMEOUT:-4}
+      PARTNER_CACHE_TTL: ${PARTNER_CACHE_TTL:-300}
+      PARTNER_SIARAN_BASE_URL: ${PARTNER_SIARAN_BASE_URL:-}
+      PARTNER_SIARAN_PATH: ${PARTNER_SIARAN_PATH:-/sessions?topic={topic}}
+      PARTNER_SIARAN_API_KEY: ${PARTNER_SIARAN_API_KEY:-}
+      PARTNER_MATERI_BASE_URL: ${PARTNER_MATERI_BASE_URL:-}
+      PARTNER_MATERI_PATH: ${PARTNER_MATERI_PATH:-/materials?topic={topic}}
+      PARTNER_MATERI_API_KEY: ${PARTNER_MATERI_API_KEY:-}
+    volumes:
+      - core-data:/data
+    mem_limit: 256m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  gateway:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      core-service:
+        condition: service_healthy
+    mem_limit: 64m
+    cpus: 0.25
+    # Tanpa `ports:` -> tidak terbuka ke jaringan. Untuk tes lokal pakai docker-compose.local.yml.
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:?isi TUNNEL_TOKEN di .env (dari dashboard Cloudflare)}
+    depends_on:
+      - gateway
+    mem_limit: 128m
+    cpus: 0.25
+
+volumes:
+  core-data:
