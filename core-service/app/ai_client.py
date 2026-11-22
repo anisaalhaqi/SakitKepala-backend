@@ -18,7 +18,7 @@ import httpx
 
 from .config import get_settings
 
-log = logging.getLogger("ujiparham.ai")
+log = logging.getLogger("SakitKepala.ai")
 
 MAX_EXPLANATION = 6000
 MAX_FINAL = 12000

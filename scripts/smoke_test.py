@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Smoke test end-to-end terhadap URL publik. Jalankan dari LAPTOP/HP (di luar STB).
 
-    python scripts/smoke_test.py https://ujiparham.stei.fun --api-key KEY_MITRA
+    python scripts/smoke_test.py https://SakitKepala.stei.fun --api-key KEY_MITRA
 
 Hanya memakai pustaka standar. Membuat satu akun uji acak, satu sesi, dan satu percobaan checkpoint
 yang sengaja salinan mentah (harus ditolak). Tidak memerlukan AI_PROVIDER tertentu.
@@ -45,7 +45,7 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("base", help="mis. https://ujiparham.stei.fun")
+    ap.add_argument("base", help="mis. https://SakitKepala.stei.fun")
     ap.add_argument("--api-key", help="X-API-Key milik salah satu kelompok mitra")
     args = ap.parse_args()
     api = args.base.rstrip("/") + "/api"

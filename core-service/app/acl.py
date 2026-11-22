@@ -119,7 +119,7 @@ class PartnerClient:
             return {"status": "ok" if hit[1] else "empty", "items": hit[1]}
 
         url = self.base_url.rstrip("/") + self.path.replace("{topic}", quote(topic, safe=""))
-        headers = {"Accept": "application/json", "User-Agent": "UjiParhamBelajar/1.0"}
+        headers = {"Accept": "application/json", "User-Agent": "SakitKepalaBelajar/1.0"}
         if self.api_key:
             headers["X-API-Key"] = self.api_key
         try:

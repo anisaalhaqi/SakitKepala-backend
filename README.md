@@ -1,15 +1,15 @@
 # Uji Paham Belajar: Core Service
 
-Microservice backend untuk aplikasi **Uji Paham Belajar** (tema *Education & Learning Tools*, Tugas Besar TST × PWAM).
+Microservice backend untuk aplikasi **Uji Paham Belajar** (tema _Education & Learning Tools_, Tugas Besar TST × PWAM).
 AI diposisikan sebagai **pendamping belajar, bukan penyedia jawaban instan**: penjelasan konsep tampil terbuka,
 sedangkan hasil akhir (kode utuh / ringkasan final) **ditahan di backend (LOCKED)** sampai pengguna menulis ulang
-intisari pemahamannya dan lolos *logic checkpoint*.
+intisari pemahamannya dan lolos _logic checkpoint_.
 
-> Ganti `ujiparham` dengan nama kelompok yang terdaftar di API Registry, dan `.stei.fun` dengan `.stei.site` untuk kelas K02.
+> Ganti `SakitKepala` dengan nama kelompok yang terdaftar di API Registry, dan `.stei.fun` dengan `.stei.site` untuk kelas K02.
 
-- **Base URL**: `https://ujiparham.stei.fun/api`
-- **Dokumentasi interaktif (Swagger)**: `https://ujiparham.stei.fun/api/docs`
-- **Kontrak OpenAPI**: `https://ujiparham.stei.fun/api/openapi.json` (salinan: [`docs/openapi.json`](docs/openapi.json))
+- **Base URL**: `https://SakitKepala.stei.fun/api`
+- **Dokumentasi interaktif (Swagger)**: `https://SakitKepala.stei.fun/api/docs`
+- **Kontrak OpenAPI**: `https://SakitKepala.stei.fun/api/openapi.json` (salinan: [`docs/openapi.json`](docs/openapi.json))
 - **Stack**: Python 3.12, FastAPI, SQLite (WAL), Nginx (gateway), Cloudflare Tunnel, Docker Compose
 
 ---
@@ -20,7 +20,7 @@ intisari pemahamannya dan lolos *logic checkpoint*.
 Aplikasi mobile / kelompok mitra
         │ HTTPS
         ▼
-Cloudflare  ujiparham.stei.fun
+Cloudflare  SakitKepala.stei.fun
         │ Cloudflare Tunnel (koneksi keluar dari STB, tanpa buka port)
         ▼
 ┌──────────────────── STB (Docker) ────────────────────┐
@@ -39,24 +39,24 @@ Saat uji lokal, `core-service` memakai sekitar 60 MB RAM.
 
 ## 2. Pemetaan Makalah DDD ke Kode
 
-| Bounded context (makalah) | Jenis | Modul | Isi |
-|---|---|---|---|
-| Validasi Pemahaman | **Core** | `validation.py` | Gatekeeper LOCKED/UNLOCKED, logic checkpoint maks. 3 percobaan, proof-of-learning, kurasi Q&A per topic |
-| Orkestrasi Penjelasan & Kurasi Q&A AI | **Core** | `ai_client.py` + `validation.py` | Penjelasan via API AI, penyimpanan pasangan Q&A konseptual |
-| Kuota & Langganan | Supporting | `quota.py` | Free 5 sesi/hari (WIB), Pro tanpa batas + ekspor |
-| Agregasi Konteks & Integrasi Topik | Supporting | `acl.py`, `public_api.py` | ACL ke mitra; endpoint publik Q&A |
-| Autentikasi & Akses API | Generic | `security.py`, `auth_routes.py` | JWT pengguna, `X-API-Key` mitra |
+| Bounded context (makalah)             | Jenis      | Modul                            | Isi                                                                                                     |
+| ------------------------------------- | ---------- | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Validasi Pemahaman                    | **Core**   | `validation.py`                  | Gatekeeper LOCKED/UNLOCKED, logic checkpoint maks. 3 percobaan, proof-of-learning, kurasi Q&A per topic |
+| Orkestrasi Penjelasan & Kurasi Q&A AI | **Core**   | `ai_client.py` + `validation.py` | Penjelasan via API AI, penyimpanan pasangan Q&A konseptual                                              |
+| Kuota & Langganan                     | Supporting | `quota.py`                       | Free 5 sesi/hari (WIB), Pro tanpa batas + ekspor                                                        |
+| Agregasi Konteks & Integrasi Topik    | Supporting | `acl.py`, `public_api.py`        | ACL ke mitra; endpoint publik Q&A                                                                       |
+| Autentikasi & Akses API               | Generic    | `security.py`, `auth_routes.py`  | JWT pengguna, `X-API-Key` mitra                                                                         |
 
-| Relasi (Tabel 1 makalah) | Pola | Di kode |
-|---|---|---|
-| Layanan AI Eksternal → Validasi Pemahaman | Conformist | `ai_client.py` mengikuti format penyedia; semua kegagalan dibungkus `AiError` |
-| Kuota & Langganan → Validasi Pemahaman | Customer–Supplier | `validation.py` hanya memanggil `quota.status / try_consume / can_export` |
-| Autentikasi → Kuota, Validasi | OHS / Published Language | `security.current_user` (JWT) dipakai semua rute pengguna |
-| Siaran Belajar, Materi Belajar → kita | Anti-Corruption Layer | `acl.py`: penerjemah JSON mitra ke struktur internal |
-| Kita → Materi Belajar, Siaran Belajar | OHS / Published Language | `public_api.py`: kontrak JSON berversi `/api/public/v1` |
+| Relasi (Tabel 1 makalah)                  | Pola                     | Di kode                                                                       |
+| ----------------------------------------- | ------------------------ | ----------------------------------------------------------------------------- |
+| Layanan AI Eksternal → Validasi Pemahaman | Conformist               | `ai_client.py` mengikuti format penyedia; semua kegagalan dibungkus `AiError` |
+| Kuota & Langganan → Validasi Pemahaman    | Customer–Supplier        | `validation.py` hanya memanggil `quota.status / try_consume / can_export`     |
+| Autentikasi → Kuota, Validasi             | OHS / Published Language | `security.current_user` (JWT) dipakai semua rute pengguna                     |
+| Siaran Belajar, Materi Belajar → kita     | Anti-Corruption Layer    | `acl.py`: penerjemah JSON mitra ke struktur internal                          |
+| Kita → Materi Belajar, Siaran Belajar     | OHS / Published Language | `public_api.py`: kontrak JSON berversi `/api/public/v1`                       |
 
-Mitigasi risiko pada makalah: *timeout + cache* (`acl.py`), *pembatasan laju* (Nginx per IP, `public_api.RateLimiter` per API key),
-*versi kontrak* (`/v1`, field `contract_version`).
+Mitigasi risiko pada makalah: _timeout + cache_ (`acl.py`), _pembatasan laju_ (Nginx per IP, `public_api.RateLimiter` per API key),
+_versi kontrak_ (`/v1`, field `contract_version`).
 
 ### Aturan domain yang ditegakkan
 
@@ -70,33 +70,33 @@ Mitigasi risiko pada makalah: *timeout + cache* (`acl.py`), *pembatasan laju* (N
 
 ## 3. Autentikasi
 
-| Pemanggil | Mekanisme |
-|---|---|
-| Pengguna aplikasi | `Authorization: Bearer <JWT>` dari `POST /api/auth/login` (berlaku 1 jam) |
+| Pemanggil                         | Mekanisme                                                                  |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| Pengguna aplikasi                 | `Authorization: Bearer <JWT>` dari `POST /api/auth/login` (berlaku 1 jam)  |
 | Kelompok mitra (server ke server) | Header `X-API-Key: <key>`, satu key per kelompok, batas 60 panggilan/menit |
-| Publik | Hanya `GET /api/health` |
+| Publik                            | Hanya `GET /api/health`                                                    |
 
 ## 4. Daftar Endpoint
 
-| Method | Path | Auth | Keterangan |
-|---|---|---|---|
-| GET | `/api/health` | – | Cek hidup |
-| POST | `/api/auth/register` | – | Daftar (email + password ≥ 8 karakter) |
-| POST | `/api/auth/login` | – | Mengembalikan JWT |
-| GET | `/api/auth/me` | JWT | Profil dan paket |
-| GET | `/api/subscription` | JWT | Paket, kuota terpakai, sisa |
-| POST | `/api/subscription/upgrade` | JWT | **Simulasi** upgrade ke Pro (`SUBSCRIPTION_SIMULATION=true`) |
-| POST | `/api/subscription/downgrade` | JWT | Simulasi kembali ke Free |
-| POST | `/api/sessions` | JWT | Mulai sesi `{topic, question}` → penjelasan terbuka, hasil LOCKED |
-| GET | `/api/sessions` | JWT | Daftar sesi milik sendiri |
-| GET | `/api/sessions/{id}` | JWT | Detail sesi; `final_result` hanya bila UNLOCKED |
-| POST | `/api/sessions/{id}/checkpoint` | JWT | Kirim intisari `{summary}` (30-2000 karakter) |
-| GET | `/api/sessions/{id}/export` | JWT | Ekspor (UNLOCKED + Pro) |
-| GET | `/api/sessions/{id}/references` | JWT | Sesi siaran + materi mitra untuk topic sesi (ACL) |
-| GET | `/api/proof-of-learning` | JWT | Riwayat bukti belajar |
-| GET | `/api/public/v1/qa?topic=` | API key | Pasangan Q&A per topic (untuk FAQ Materi Belajar) |
-| GET | `/api/public/v1/questions?topic=` | API key | Daftar pertanyaan (pemantik diskusi Siaran Belajar) |
-| GET | `/api/public/v1/topics` | API key | Topic yang tersedia + jumlah Q&A |
+| Method | Path                              | Auth    | Keterangan                                                        |
+| ------ | --------------------------------- | ------- | ----------------------------------------------------------------- |
+| GET    | `/api/health`                     | –       | Cek hidup                                                         |
+| POST   | `/api/auth/register`              | –       | Daftar (email + password ≥ 8 karakter)                            |
+| POST   | `/api/auth/login`                 | –       | Mengembalikan JWT                                                 |
+| GET    | `/api/auth/me`                    | JWT     | Profil dan paket                                                  |
+| GET    | `/api/subscription`               | JWT     | Paket, kuota terpakai, sisa                                       |
+| POST   | `/api/subscription/upgrade`       | JWT     | **Simulasi** upgrade ke Pro (`SUBSCRIPTION_SIMULATION=true`)      |
+| POST   | `/api/subscription/downgrade`     | JWT     | Simulasi kembali ke Free                                          |
+| POST   | `/api/sessions`                   | JWT     | Mulai sesi `{topic, question}` → penjelasan terbuka, hasil LOCKED |
+| GET    | `/api/sessions`                   | JWT     | Daftar sesi milik sendiri                                         |
+| GET    | `/api/sessions/{id}`              | JWT     | Detail sesi; `final_result` hanya bila UNLOCKED                   |
+| POST   | `/api/sessions/{id}/checkpoint`   | JWT     | Kirim intisari `{summary}` (30-2000 karakter)                     |
+| GET    | `/api/sessions/{id}/export`       | JWT     | Ekspor (UNLOCKED + Pro)                                           |
+| GET    | `/api/sessions/{id}/references`   | JWT     | Sesi siaran + materi mitra untuk topic sesi (ACL)                 |
+| GET    | `/api/proof-of-learning`          | JWT     | Riwayat bukti belajar                                             |
+| GET    | `/api/public/v1/qa?topic=`        | API key | Pasangan Q&A per topic (untuk FAQ Materi Belajar)                 |
+| GET    | `/api/public/v1/questions?topic=` | API key | Daftar pertanyaan (pemantik diskusi Siaran Belajar)               |
+| GET    | `/api/public/v1/topics`           | API key | Topic yang tersedia + jumlah Q&A                                  |
 
 Kode status penting: `401` kredensial salah, `403 LOCKED / PRO_REQUIRED` untuk ekspor, `404` sesi bukan milikmu,
 `409 ATTEMPTS_EXHAUSTED / ALREADY_UNLOCKED`, `422` input tidak valid, `429 QUOTA_EXCEEDED` atau terkena rate limit, `503` AI tidak tersedia.
@@ -104,7 +104,7 @@ Kode status penting: `401` kredensial salah, `403 LOCKED / PRO_REQUIRED` untuk e
 ### Contoh request
 
 ```bash
-BASE=https://ujiparham.stei.fun/api
+BASE=https://SakitKepala.stei.fun/api
 
 # Daftar + login
 curl -X POST $BASE/auth/register -H "Content-Type: application/json" \
@@ -132,8 +132,8 @@ Respons `GET /api/public/v1/qa?topic=rekursi`:
   "topic": "rekursi",
   "count": 2,
   "items": [
-    {"question": "Apa itu rekursi?", "answer": "..."},
-    {"question": "Mengapa rekursi penting dipahami?", "answer": "..."}
+    { "question": "Apa itu rekursi?", "answer": "..." },
+    { "question": "Mengapa rekursi penting dipahami?", "answer": "..." }
   ]
 }
 ```
@@ -150,16 +150,16 @@ Respons `GET /api/public/v1/qa?topic=rekursi`:
 
 Salin `.env.example` ke `.env`, isi, lalu `chmod 600 .env`. **Jangan di-commit.**
 
-| Variabel | Keterangan |
-|---|---|
-| `JWT_SECRET` | Wajib, ≥ 32 karakter (`openssl rand -hex 32`) |
-| `TUNNEL_TOKEN` | Wajib, dari dashboard Cloudflare |
-| `API_KEYS` | `nama:key,nama2:key2`, satu per kelompok mitra |
-| `FREE_DAILY_QUOTA` / `MAX_ATTEMPTS` | 5 / 3 |
-| `SUBSCRIPTION_SIMULATION` | `true` = tombol upgrade Pro berupa simulasi |
-| `AI_PROVIDER` | `mock` (dev/test) atau `http` (API kompatibel OpenAI chat completions) |
-| `AI_API_URL`, `AI_API_KEY`, `AI_MODEL` | Wajib bila `AI_PROVIDER=http` |
-| `PARTNERS_ENABLED` + `PARTNER_*` | Integrasi ACL ke Siaran Belajar / Materi Belajar |
+| Variabel                               | Keterangan                                                             |
+| -------------------------------------- | ---------------------------------------------------------------------- |
+| `JWT_SECRET`                           | Wajib, ≥ 32 karakter (`openssl rand -hex 32`)                          |
+| `TUNNEL_TOKEN`                         | Wajib, dari dashboard Cloudflare                                       |
+| `API_KEYS`                             | `nama:key,nama2:key2`, satu per kelompok mitra                         |
+| `FREE_DAILY_QUOTA` / `MAX_ATTEMPTS`    | 5 / 3                                                                  |
+| `SUBSCRIPTION_SIMULATION`              | `true` = tombol upgrade Pro berupa simulasi                            |
+| `AI_PROVIDER`                          | `mock` (dev/test) atau `http` (API kompatibel OpenAI chat completions) |
+| `AI_API_URL`, `AI_API_KEY`, `AI_MODEL` | Wajib bila `AI_PROVIDER=http`                                          |
+| `PARTNERS_ENABLED` + `PARTNER_*`       | Integrasi ACL ke Siaran Belajar / Materi Belajar                       |
 
 ## 7. Menjalankan
 
@@ -177,7 +177,7 @@ JWT_SECRET=$(openssl rand -hex 32) DB_PATH=./dev.db uvicorn app.main:app --port 
 ### Deploy di STB
 
 ```bash
-git clone https://github.com/<user>/ujiparham-backend.git && cd ujiparham-backend
+git clone https://github.com/<user>/SakitKepala-backend.git && cd SakitKepala-backend
 cp .env.example .env && nano .env && chmod 600 .env
 docker compose up -d --build
 docker compose ps                           # core-service harus (healthy)
@@ -191,15 +191,15 @@ lalu buka `http://localhost:8080/api/docs`.
 ### Cloudflare Tunnel
 
 1. Pesan nama kelompok di **API Registry**.
-2. Dashboard Cloudflare akun kelas → **Networks → Tunnels → Create a tunnel → Cloudflared**, nama `k01-ujiparham` (kelas-namakelompok).
+2. Dashboard Cloudflare akun kelas → **Networks → Tunnels → Create a tunnel → Cloudflared**, nama `k01-SakitKepala` (kelas-namakelompok).
 3. Salin hanya string setelah `--token` ke `TUNNEL_TOKEN` di `.env`. Jangan jalankan perintah `docker run` yang ditampilkan.
-4. **Public Hostname**: subdomain `ujiparham`, domain `stei.fun` (K01) / `stei.site` (K02), Type **HTTP**, URL **`gateway:80`**.
-5. `docker compose up -d`, tunnel harus berstatus *Healthy*. Lalu logout dari Cloudflare.
+4. **Public Hostname**: subdomain `SakitKepala`, domain `stei.fun` (K01) / `stei.site` (K02), Type **HTTP**, URL **`gateway:80`**.
+5. `docker compose up -d`, tunnel harus berstatus _Healthy_. Lalu logout dari Cloudflare.
 
 ### Smoke test dari luar STB
 
 ```bash
-python scripts/smoke_test.py https://ujiparham.stei.fun --api-key <KEY_MITRA>
+python scripts/smoke_test.py https://SakitKepala.stei.fun --api-key <KEY_MITRA>
 ```
 
 ### Backup

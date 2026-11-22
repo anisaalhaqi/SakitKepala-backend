@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from . import acl, auth_routes, db, public_api, quota, validation
 from .config import get_settings
 
-log = logging.getLogger("ujiparham")
+log = logging.getLogger("SakitKepala")
 
 DESCRIPTION = """
 Core service **Uji Paham Belajar**: AI sebagai pendamping belajar, bukan penyedia jawaban instan.
@@ -53,4 +53,4 @@ def health():
             con.execute("SELECT 1").fetchone()
     except Exception:
         raise HTTPException(status_code=503, detail="database tidak bisa diakses")
-    return {"status": "ok", "service": "ujiparham-core", "version": app.version}
+    return {"status": "ok", "service": "SakitKepala-core", "version": app.version}
