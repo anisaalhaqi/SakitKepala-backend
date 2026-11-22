@@ -5,13 +5,14 @@ AI diposisikan sebagai **pendamping belajar, bukan penyedia jawaban instan**: pe
 sedangkan hasil akhir (kode utuh / ringkasan final) **ditahan di backend (LOCKED)** sampai pengguna menulis ulang
 intisari pemahamannya dan lolos _logic checkpoint_.
 
-> Ganti `SakitKepala` dengan nama kelompok yang terdaftar di API Registry, dan `.stei.fun` dengan `.stei.site` untuk kelas K02.
+Kelompok **SakitKepala** (kelas K02). Dokumentasi PAWM lengkap: [`docs/18224012_18224080_Dokumentasi PAWM – Uji Paham Belajar.pdf`](<docs/18224012_18224080_Dokumentasi PAWM – Uji Paham Belajar.pdf>).
 
-- **Base URL**: `https://SakitKepala.stei.fun/api`
-- **Dokumentasi interaktif (Swagger)**: `https://SakitKepala.stei.fun/api/docs`
-- **Kontrak OpenAPI**: `https://SakitKepala.stei.fun/api/openapi.json` (salinan: [`docs/openapi.json`](docs/openapi.json))
+- **Base URL**: `https://sakitkepala.stei.site/api`
+- **Dokumentasi interaktif (Swagger)**: `https://sakitkepala.stei.site/api/docs`
+- **Kontrak OpenAPI**: `https://sakitkepala.stei.site/api/openapi.json` (salinan: [`docs/openapi.json`](docs/openapi.json))
 - **Stack**: Python 3.12, FastAPI, SQLite (WAL), Nginx (gateway), Cloudflare Tunnel, Docker Compose
-- **Aplikasi mobile (PWAM)**: folder [`app/`](app/README.md), React Native (Expo)
+- **Aplikasi mobile (PWAM)**: folder [`app/`](app/README.md), React Native, Expo SDK 58, React Navigation 7, Expo SecureStore
+- **Akun demo (server live)**: `demo@sakitkepala.test` / `UjiPaham123!` (paket Free, khusus demo)
 
 ---
 
@@ -21,19 +22,29 @@ intisari pemahamannya dan lolos _logic checkpoint_.
 Aplikasi mobile / kelompok mitra
         │ HTTPS
         ▼
-Cloudflare  SakitKepala.stei.fun
+Cloudflare  sakitkepala.stei.site
         │ Cloudflare Tunnel (koneksi keluar dari STB, tanpa buka port)
         ▼
-┌──────────────────── STB (Docker) ────────────────────┐
-│ tunnel ─► gateway (Nginx, rate limit) ─► core-service │
-│                                           (FastAPI)   │
-│                                              │        │
-│                                           SQLite      │
-│                                         (volume)      │
-└───────────────────────────────────────────────────────┘
+┌──────────────────────────── STB ─────────────────────────────┐
+│ cloudflared ─► Nginx aaPanel :80 ─(/api/)─► 127.0.0.1:8085   │
+│                                                │             │
+│   Docker:  gateway (Nginx, rate limit, :80) ◄──┘             │
+│                 │                                            │
+│                 ▼                                            │
+│            core-service :8000 (FastAPI) ─► SQLite (volume)   │
+└──────────────────────────────────────────────────────────────┘
         core-service ──► Layanan AI eksternal (conformist)
         core-service ──► API mitra (ACL, opsional)
 ```
+
+| Komponen                | Port                                       | Keterangan                                              |
+| ----------------------- | ------------------------------------------ | ------------------------------------------------------- |
+| Cloudflare route        | `localhost:80`                             | Public hostname diarahkan ke Nginx aaPanel              |
+| Nginx aaPanel           | `80`                                       | Meneruskan `/api/` ke `127.0.0.1:8085`                  |
+| Gateway (Docker)        | `127.0.0.1:8085` di host, `80` di container | Hanya terbuka untuk localhost                           |
+| core-service            | `8000`                                     | Hanya di jaringan Docker                                |
+
+Port `80` milik Nginx aaPanel dan `8080` dipakai proyek lain di STB, jadi keduanya tidak dipakai untuk API ini.
 
 Setiap container dibatasi memori dan CPU (`core-service` 256 MB / 0.5 CPU, `gateway` 64 MB, `tunnel` 128 MB).
 Saat uji lokal, `core-service` memakai sekitar 60 MB RAM.
@@ -105,7 +116,7 @@ Kode status penting: `401` kredensial salah, `403 LOCKED / PRO_REQUIRED` untuk e
 ### Contoh request
 
 ```bash
-BASE=https://SakitKepala.stei.fun/api
+BASE=https://sakitkepala.stei.site/api
 
 # Daftar + login
 curl -X POST $BASE/auth/register -H "Content-Type: application/json" \
@@ -178,29 +189,33 @@ JWT_SECRET=$(openssl rand -hex 32) DB_PATH=./dev.db uvicorn app.main:app --port 
 ### Deploy di STB
 
 ```bash
-git clone https://github.com/<user>/SakitKepala-backend.git && cd SakitKepala-backend
+git clone https://github.com/anisaalhaqi/SakitKepala-backend.git && cd SakitKepala-backend
 cp .env.example .env && nano .env && chmod 600 .env
 docker compose up -d --build
-docker compose ps                           # core-service harus (healthy)
+docker compose ps                           # core-service (healthy), gateway PORTS 127.0.0.1:8085->80/tcp
+curl http://localhost:8085/api/health       # dari dalam STB
 docker compose logs tunnel | tail -5        # cari "Registered tunnel connection"
 docker stats --no-stream; free -h
 ```
 
-Tes lokal tanpa tunnel: `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build core-service gateway`,
-lalu buka `http://localhost:8080/api/docs`.
+Di STB, gateway dipetakan ke `127.0.0.1:8085:80` (bukan 8080) dan Nginx aaPanel meneruskan `/api/` ke port tersebut.
+
+Tes lokal di laptop (bukan STB): `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build core-service gateway`,
+lalu buka `http://localhost:8080/api/docs`. Aplikasi mobile dapat diarahkan ke backend lokal ini lewat `http://10.0.2.2:8080/api` (emulator Android)
+atau `http://<IP LAN komputer>:8080/api` (HP fisik).
 
 ### Cloudflare Tunnel
 
 1. Pesan nama kelompok di **API Registry**.
-2. Dashboard Cloudflare akun kelas → **Networks → Tunnels → Create a tunnel → Cloudflared**, nama `k01-SakitKepala` (kelas-namakelompok).
+2. Dashboard Cloudflare akun kelas → **Networks → Tunnels → Create a tunnel → Cloudflared**, nama `k02-SakitKepala` (kelas-namakelompok).
 3. Salin hanya string setelah `--token` ke `TUNNEL_TOKEN` di `.env`. Jangan jalankan perintah `docker run` yang ditampilkan.
-4. **Public Hostname**: subdomain `SakitKepala`, domain `stei.fun` (K01) / `stei.site` (K02), Type **HTTP**, URL **`gateway:80`**.
+4. **Public Hostname**: subdomain `sakitkepala`, domain `stei.site` (K02), Type **HTTP**, URL **`localhost:80`** (Nginx aaPanel, yang meneruskan `/api/` ke gateway di `127.0.0.1:8085`).
 5. `docker compose up -d`, tunnel harus berstatus _Healthy_. Lalu logout dari Cloudflare.
 
 ### Smoke test dari luar STB
 
 ```bash
-python scripts/smoke_test.py https://SakitKepala.stei.fun --api-key <KEY_MITRA>
+python scripts/smoke_test.py https://sakitkepala.stei.site --api-key <KEY_MITRA>
 ```
 
 ### Backup
@@ -221,6 +236,7 @@ serta ACL (variasi skema mitra, mitra mati, cache basi).
   Mode `mock` hanya mencocokkan kata kunci dan tidak boleh dipakai saat penilaian.
 - **Ekspor**: salin hasil tersedia bagi semua pengguna setelah UNLOCKED; **ekspor** (hasil akhir + catatan pemahaman) khusus Pro, mengikuti bagian model bisnis makalah.
 - **Pembayaran** tidak diimplementasikan; upgrade Pro adalah simulasi.
-- **ACL mitra** dimatikan secara default. Path endpoint mitra (`PARTNER_*_PATH`) harus disesuaikan dengan kontrak mereka di API Registry.
+- **ACL mitra** dimatikan secara default dan saat ini belum aktif di server live (`/references` menjawab `disabled`).
+  Bila mitra mati atau dimatikan, aplikasi menyembunyikan bagian referensi dan checkpoint tetap berjalan normal. Path endpoint mitra (`PARTNER_*_PATH`) harus disesuaikan dengan kontrak mereka di API Registry.
   Aturan STB melarang layanan integrasi (Tugas 3) berjalan di STB, sehingga `acl.py` dapat dipindahkan ke layanan integrasi di server lain.
 - Data uji saja; jangan simpan data pribadi asli pengguna di STB.
