@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Api from '../ApiService';
 import { useAuth } from '../AuthContext';
-import { Banner, Body, Button, Card, Label, Screen, colors } from '../ui';
+import { Banner, Body, Button, Card, Label, Screen, colors, tierLabel } from '../ui';
 
 function Row({ label, value }) {
   return (
@@ -36,7 +36,7 @@ export default function AkunScreen() {
     }, [load]),
   );
 
-  const tier = quota?.tier || user?.tier || '-';
+  const tier = tierLabel(quota?.tier || user?.tier);
 
   return (
     <Screen>
