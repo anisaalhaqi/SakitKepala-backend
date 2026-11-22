@@ -10,7 +10,7 @@ menampilkan sesi siaran dari **Sistem Siaran Belajar** dan materi dari **Sistem 
 | API (live) | `https://sakitkepala.stei.site/api` · Swagger `/api/docs` |
 | Backend | folder repo ini ([README backend](../README.md)) |
 | Stack | React Native 0.88, Expo SDK 58, React Navigation 7, Expo SecureStore, Expo Clipboard |
-| Akun demo | `[ISI: email demo di server live]` / `[ISI: kata sandi demo]` |
+| Akun demo | `demo@sakitkepala.test` / `UjiPaham123!` (paket Free, khusus demo) |
 
 ## Menjalankan
 
