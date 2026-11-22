@@ -11,6 +11,7 @@ intisari pemahamannya dan lolos _logic checkpoint_.
 - **Dokumentasi interaktif (Swagger)**: `https://SakitKepala.stei.fun/api/docs`
 - **Kontrak OpenAPI**: `https://SakitKepala.stei.fun/api/openapi.json` (salinan: [`docs/openapi.json`](docs/openapi.json))
 - **Stack**: Python 3.12, FastAPI, SQLite (WAL), Nginx (gateway), Cloudflare Tunnel, Docker Compose
+- **Aplikasi mobile (PWAM)**: folder [`app/`](app/README.md), React Native (Expo)
 
 ---
 
